@@ -1,16 +1,9 @@
-
-// House Hack Tracker - Core React App (Vite + Tailwind) + Live API Hooks
-
 import { useEffect, useState } from 'react';
-import { Card, CardContent } from '@/components/ui/card';
-import { Input } from '@/components/ui/input';
-import { Button } from '@/components/ui/button';
 
 const FHA_INTEREST_RATE = 6.93; // April 2025 default
 const DOWN_PAYMENT_PERCENT = 3.5;
 const PROPERTY_TAX_INSURANCE_RATE = 2.25;
 
-// Placeholder for static fallback (until API connected)
 const neighborhoods = [
   {
     name: 'Southtown / Lavaca',
@@ -66,22 +59,14 @@ export default function Home() {
   const [cityFilter, setCityFilter] = useState('');
 
   useEffect(() => {
-    async function fetchNeighborhoods() {
-      try {
-        const fetchedData = neighborhoods.map((n) => {
-          const mortgage = calculateMortgage(n.price);
-          const totalRent = n.rentPerUnit * n.units;
-          const netRent = totalRent - mortgage;
-          const yieldPercent = (totalRent * 12) / n.price * 100;
-          return { ...n, mortgage, totalRent, netRent, yieldPercent };
-        });
-        setData(fetchedData);
-      } catch (err) {
-        console.error('API fetch failed:', err);
-        setData([]);
-      }
-    }
-    fetchNeighborhoods();
+    const updated = neighborhoods.map((n) => {
+      const mortgage = calculateMortgage(n.price);
+      const totalRent = n.rentPerUnit * n.units;
+      const netRent = totalRent - mortgage;
+      const yieldPercent = (totalRent * 12) / n.price * 100;
+      return { ...n, mortgage, totalRent, netRent, yieldPercent };
+    });
+    setData(updated);
   }, []);
 
   const filtered = data.filter((n) =>
@@ -89,29 +74,36 @@ export default function Home() {
   );
 
   return (
-    <div className="p-4 grid gap-4">
-      <h1 className="text-2xl font-bold">Texas House Hack Tracker</h1>
+    <div style={{ padding: '2rem' }}>
+      <h1 style={{ fontSize: '24px', fontWeight: 'bold', marginBottom: '1rem' }}>
+        Texas House Hack Tracker
+      </h1>
 
-      <div className="flex gap-2 mb-4">
-        <Input
-          type="text"
-          placeholder="Filter by city..."
-          value={cityFilter}
-          onChange={(e) => setCityFilter(e.target.value)}
-        />
-      </div>
+      <input
+        type="text"
+        placeholder="Filter by city..."
+        value={cityFilter}
+        onChange={(e) => setCityFilter(e.target.value)}
+        style={{ padding: '10px', fontSize: '16px', marginBottom: '20px', width: '300px' }}
+      />
 
       {filtered.map((item) => (
-        <Card key={item.name}>
-          <CardContent className="p-4">
-            <h2 className="text-xl font-semibold">{item.name}, {item.city}</h2>
-            <p>Price: ${item.price.toLocaleString()}</p>
-            <p>Est. Monthly Mortgage: ${item.mortgage.toFixed(0)}</p>
-            <p>Total Rent (All Units): ${item.totalRent}</p>
-            <p>Net Rent (1 Unit Occupied): ${item.netRent - item.rentPerUnit}</p>
-            <p>Rental Yield: {item.yieldPercent.toFixed(1)}%</p>
-          </CardContent>
-        </Card>
+        <div
+          key={item.name}
+          style={{
+            border: '1px solid #ccc',
+            borderRadius: '8px',
+            padding: '1rem',
+            marginBottom: '1rem'
+          }}
+        >
+          <h2>{item.name}, {item.city}</h2>
+          <p>Price: ${item.price.toLocaleString()}</p>
+          <p>Est. Monthly Mortgage: ${item.mortgage.toFixed(0)}</p>
+          <p>Total Rent (All Units): ${item.totalRent}</p>
+          <p>Net Rent (1 Unit Occupied): ${(item.netRent - item.rentPerUnit).toFixed(0)}</p>
+          <p>Rental Yield: {item.yieldPercent.toFixed(1)}%</p>
+        </div>
       ))}
     </div>
   );
