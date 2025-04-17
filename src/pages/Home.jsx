@@ -1,102 +1,58 @@
-import { useState, useEffect } from 'react';
-
-// Example property data (to simulate API response)
-const properties = [
-  {
-    name: "Southtown / Lavaca",
-    city: "San Antonio",
-    price: 400000,
-    rentPerUnit: 1695,
-    units: 2,
-    walkability: 84,
-    drivability: 92,
-    rating: "A"
-  },
-  {
-    name: "Eastwood",
-    city: "Houston",
-    price: 391500,
-    rentPerUnit: 1726,
-    units: 2,
-    walkability: 76,
-    drivability: 88,
-    rating: "B+"
-  }
-];
-
-// Constants
-const FHA_RATE = 0.035;
-const FHA_MIP = 0.0175;
-const CLOSING_COST_RATE = 0.03;
-const PROPERTY_TAX_RATE = 0.0185;
-const INSURANCE_RATE = 0.0035;
-const INTEREST_RATE = 0.0693;
-
-function calcMortgage(price) {
-  const downPayment = price * FHA_RATE;
-  const loan = price - downPayment;
-  const monthlyRate = INTEREST_RATE / 12;
-  const numPayments = 30 * 12;
-
-  const baseMortgage = (loan * monthlyRate) / (1 - Math.pow(1 + monthlyRate, -numPayments));
-  const propertyTax = (price * PROPERTY_TAX_RATE) / 12;
-  const insurance = (price * INSURANCE_RATE) / 12;
-
-  return {
-    monthly: baseMortgage + propertyTax + insurance,
-    downPayment,
-    loan,
-    tax: price * PROPERTY_TAX_RATE,
-    insurance: price * INSURANCE_RATE,
-    mip: loan * FHA_MIP,
-    closing: price * CLOSING_COST_RATE,
-  };
-}
+import { useEffect, useState } from 'react';
 
 export default function Home() {
   const [data, setData] = useState([]);
 
   useEffect(() => {
-    const enriched = properties.map(p => {
-      const costs = calcMortgage(p.price);
-      const totalRent = p.rentPerUnit * p.units;
-      const netRent = totalRent - costs.monthly;
-      const yieldPercent = (totalRent * 12) / p.price * 100;
-      const totalUpfront = costs.downPayment + costs.mip + costs.tax + costs.insurance + costs.closing;
+    const fetchListings = async () => {
+      const options = {
+        method: 'GET',
+        headers: {
+          'x-rapidapi-host': 'realtor-com4.p.rapidapi.com',
+          'x-rapidapi-key': import.meta.env.VITE_REALTOR_API_KEY
+        }
+      };
 
-      return { ...p, ...costs, totalRent, netRent, yieldPercent, totalUpfront };
-    });
-    setData(enriched);
+      try {
+        const response = await fetch(
+          'https://realtor-com4.p.rapidapi.com/properties/list_v2?location=Austin_TX&limit=10&offset=0&status=for_sale',
+          options
+        );
+        const data = await response.json();
+
+        const listings = data.properties.map(p => ({
+          id: p.property_id,
+          name: p.address.line || 'Unnamed Property',
+          city: p.address.city || 'Austin',
+          price: p.price || 0,
+          photo: p.primary_photo?.href || '',
+          beds: p.beds || '?',
+          baths: p.baths_full || '?',
+          sqft: p.building_size?.size || '?'
+        }));
+
+        setData(listings);
+      } catch (err) {
+        console.error('Failed to fetch listings:', err);
+        setData([]);
+      }
+    };
+
+    fetchListings();
   }, []);
 
   return (
     <div style={{ padding: '2rem', fontFamily: 'sans-serif' }}>
-      <h1 style={{ fontSize: '24px', marginBottom: '1rem' }}>🏠 House Hack Tracker (Investor View)</h1>
-      {data.map((item, idx) => (
-        <div key={idx} style={{ background: '#fff', padding: '1rem', marginBottom: '1rem', borderRadius: '8px', boxShadow: '0 2px 4px rgba(0,0,0,0.1)' }}>
-          <h2>{item.name} — {item.city}</h2>
-          <p><strong>Home Price:</strong> ${item.price.toLocaleString()}</p>
-          <p><strong>Down Payment (3.5%):</strong> ${item.downPayment.toFixed(0)}</p>
-          <details>
-            <summary style={{ cursor: 'pointer' }}>View Additional Upfront Costs</summary>
-            <ul>
-              <li>FHA MIP: ${item.mip.toFixed(0)}</li>
-              <li>Property Taxes: ${item.tax.toFixed(0)}</li>
-              <li>Insurance: ${item.insurance.toFixed(0)}</li>
-              <li>Closing Costs: ${item.closing.toFixed(0)}</li>
-            </ul>
-          </details>
-          <p><strong>Total Upfront Costs:</strong> ${item.totalUpfront.toFixed(0)}</p>
-          <p><strong>Loan Amount:</strong> ${item.loan.toFixed(0)}</p>
-          <p><strong>Est. Monthly Mortgage:</strong> ${item.monthly.toFixed(0)}</p>
-          <hr />
-          <p><strong>Units:</strong> {item.units} — Rent/Unit: ${item.rentPerUnit}</p>
-          <p><strong>Total Rent:</strong> ${item.totalRent}</p>
-          <p><strong>Cashflow (1 unit occupied):</strong> ${item.netRent - item.rentPerUnit}</p>
-          <p><strong>Rental Yield:</strong> {item.yieldPercent.toFixed(1)}%</p>
-          <hr />
-          <p><strong>Rating:</strong> {item.rating}</p>
-          <p>🚶 Walkability: {item.walkability}/100 | 🚗 Drivability: {item.drivability}/100</p>
+      <h1 style={{ fontSize: '24px', marginBottom: '1rem' }}>🏠 Live Listings - Austin, TX</h1>
+
+      {data.map((item) => (
+        <div key={item.id} style={{ background: '#fff', padding: '1rem', marginBottom: '1rem', borderRadius: '8px', boxShadow: '0 2px 4px rgba(0,0,0,0.1)' }}>
+          <h2>{item.name}</h2>
+          <p><strong>City:</strong> {item.city}</p>
+          <p><strong>Price:</strong> ${item.price.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
+          <p><strong>Beds:</strong> {item.beds} | <strong>Baths:</strong> {item.baths}</p>
+          <p><strong>Square Feet:</strong> {item.sqft.toLocaleString()}</p>
+          {item.photo && <img src={item.photo} alt="Property" style={{ width: '100%', maxWidth: '500px', borderRadius: '8px' }} />}
         </div>
       ))}
     </div>
